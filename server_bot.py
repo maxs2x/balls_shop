@@ -7,8 +7,9 @@ from aiogram.utils.emoji import emojize
 from aiogram.types import ParseMode
 from aiogram.utils.markdown import bold, code, italic, text
 
-
+import app
 import config
+import admin
 from keyboard import *
 import db_hendler
 
@@ -23,7 +24,40 @@ dp = Dispatcher(bot)
 async def cmd_start(message: types.Message):
     await bot.send_message(message.chat.id, 'Служба доставки гелиевых шариков в Кирове. Выберите нужный пункт в меню',
                     reply_markup=main_menu_kb)
-    db_hendler.add_user(db_hendler.conn, message.from_user.id)
+    app.add_user(message.from_user.id)
+
+@dp.message_handler(commands=['admin'])
+async def cmd_start(message: types.Message):
+    con2 = db_hendler.DB_select()
+    con = db_hendler.DB_insert()
+    tut = con2.string_with_value('user_id', 'user_data', "user_id", str(message.chat.id))
+    print(tut[0][0])
+    if str(tut[0][0]) != str(message.chat.id):
+        con.full_string('user_data', ['user_id'], [str(message.chat.id)])
+    await bot.send_message(message.chat.id, 'Выбери нужное действие',
+                    reply_markup=admin_menu_kb)
+
+
+@dp.message_handler(lambda message: message.md_text and ';' in message.md_text)
+async def add_product(message: types.Message):
+    if message.md_text.count(';') >= 1:
+        print('handler')
+        con = DB_select()
+        status = con.string_with_value('callback_in', 'user_data', 'user_id', str(message.chat.id))
+        if str(status[0][0]) == 'add_prod':
+            await admin.parse_text(message.chat.id, message.md_text)
+
+
+@dp.message_handler(content_types='photo')
+async def input_photo(message: types.ContentType.PHOTO):
+    download_photo = message.photo[2].file_id
+    see_cache = DB_select()
+    cache = see_cache.string_with_value('cache', 'user_data', 'user_id', message.chat.id)
+    if cache[0][0] == 'photo':
+        arr_uniq_id = app.search_max_uniq_id()
+        insert_photo = DB_update()
+        insert_photo.string_with_value(arr_uniq_id[1], 'file_id', 'uniq_id', arr_uniq_id[0], download_photo)
+        insert_photo.string_with_value('user_data', 'cache', 'user_id', message.chat.id, 'added')
 
 
 @dp.message_handler(content_types='text')
@@ -41,10 +75,17 @@ async def cmd_menu(message: types.Message):
             await app.remove_all_cart(cht_id)
         else:
             await app.nav_back(cht_id, forw_id, 'two')
-            db_hendler.update_table(db_hendler.conn, 'user_data', 'user_id', 'phone', None, cht_id)
+            db_obj = db_hendler.DB_update()
+            db_obj.string_with_value('user_data', 'phone', 'user_id', cht_id, None)
     elif message.md_text != '✅  Подтвердить  ✅':
-        if db_hendler.get_callback_fo_user_id(db_hendler.conn, cht_id)[3] != None:
-            db_hendler.update_table(db_hendler.conn, 'user_data', 'user_id', 'phone', message.md_text, cht_id)
+        db_select = db_hendler.DB_select()
+        callback_in = db_select.string_with_value('in_cart', 'user_data', 'user_id', cht_id)
+        print(callback_in)
+        if callback_in[0][0] != None:
+            db_obj = db_hendler.DB_update()
+            db_obj.string_with_value('user_data', 'phone', 'user_id', cht_id, message.md_text)
+
+
 
 
 
@@ -102,6 +143,14 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
             await app.add_remove(cht_id, forw_id, 'remove', None)
         elif call_back == 'remove_end':
             await app.add_remove(cht_id, forw_id, 'remove', back_categories)
+
+        #Функционал админа
+        if call_back == 'add_prod' or call_back == 'del_prod' or call_back == 'red_prod':
+            await admin.enter_admin(call_back, cht_id)
+        elif call_back == 'admin_select_imggelii' or call_back == 'admin_select_imgfolga' or call_back == 'admin_select_imgkmpzc':
+            await admin.get_data(call_back, cht_id)
+        elif call_back[:11] == 'admin_added':
+            await admin.set_data(call_back, cht_id, forw_id)
 
     #Эта функция нужна для реализации кнопки "Назад"
     await _send_fun_(call_back, cht_id, forw_id)
