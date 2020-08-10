@@ -18,10 +18,15 @@ def get_callback_fo_user_id(user_id):
 
 def get_string_fo_id(name_table, id):
     db_obj = db_hendler.DB_select()
+    it_be = db_obj.string_with_value('price', name_table, 'id', str(id))
+    if len(it_be) == 0:
+        new_id = int(id) + 1
+        return get_string_fo_id(name_table, new_id)
     row = db_obj.string_with_value('*', str(name_table), 'id', str(id))
+    ret_info = [row[0], id]
     print('get_string_fo_id')
-    print(row)
-    return row[0]
+    print(ret_info)
+    return ret_info
 
 
 def add_user(user_id):
@@ -57,27 +62,34 @@ async def number_of_added(cht_id, file_id):
 async def send_product_kart(call_back, cht_id, for_id):
     await server_bot.bot.delete_message(cht_id, for_id)
     get_card = db_hendler.DB_select()
-    all_cart = get_card.max_value('id', str(call_back))
+    count_cart = get_card.count_string('id', str(call_back))[0][0]
+    print(count_cart)
     num_mes1 = int(for_id)
     db_obj = db_hendler.DB_update()
     db_obj.string_with_value('user_data', 'callback_in', 'user_id', cht_id, call_back)
     db_obj.string_with_value('user_data', 'message_id', 'user_id', cht_id, str(num_mes1))
 
     print('Chat_id produkt cart: ' + str(cht_id))
-    for i in range(1, int(all_cart) + 1):
+    start_index = 1
+    for i in range(1, int(count_cart) + 1):
         if i == 1:
             num_mes1 += 1
         else:
             num_mes1 += 2
         num_mes = str(num_mes1)
-        descript = get_string_fo_id(call_back, i)[1]
-        file_id = get_string_fo_id(call_back, i)[2]
+        info_about_prod = get_string_fo_id(call_back, start_index)
+        if start_index != int(info_about_prod[1]):
+            start_index = int(info_about_prod[1])
+        start_index += 1
+        descript = info_about_prod[0]
+        file_id = info_about_prod[0][2]
         vsego = await number_of_added(cht_id, file_id)
-        await server_bot.bot.send_message(cht_id, descript)
-        if i < all_cart:
-            product_card_kb = await assemble_keyboard('🛒 ' + str(vsego), None)
+        text = str(descript[1]) + '\n Цена ' + str(descript[3])
+        await server_bot.bot.send_message(cht_id, text)
+        if i < int(count_cart):
+            product_card_kb = await assemble_keyboard('🛒 ' + str(vsego), None, descript[4])
         else:
-            product_card_kb = await assemble_keyboard('🛒 ' + str(vsego), back_categories)
+            product_card_kb = await assemble_keyboard('🛒 ' + str(vsego), back_categories, descript[4])
 
         await server_bot.bot.send_photo(cht_id,
                                         file_id,
@@ -85,6 +97,7 @@ async def send_product_kart(call_back, cht_id, for_id):
                                         reply_to_message_id=num_mes)
         await server_bot.bot.delete_message(cht_id, num_mes)
         sleep(0.1)
+
 
 
 
@@ -122,18 +135,19 @@ async def nav_back(cht_id, for_id, many):
             print('Error in nav_back')
 
 
-async def add_produkt(cht_id, forw_id):
+async def add_produkt(cht_id, forw_id, uniq_id):
     info_of_user = get_callback_fo_user_id(cht_id)
-    old_message_id = info_of_user[2]
+#    old_message_id = info_of_user[2]
     table = info_of_user[1]
     in_cart = info_of_user[3]
     if info_of_user[4] != None:
         price = int(info_of_user[4])
     else:
         price = 0
-    print('add_produkt ' + str(price))
-    id_produkt = (int(forw_id) - int(old_message_id))/2
-    all_product_info = get_string_fo_id(table, id_produkt)
+#    id_produkt = (int(forw_id) - int(old_message_id))/2
+#    all_product_info = get_string_fo_id(table, id_produkt)
+    db_select = db_hendler.DB_select()
+    all_product_info = db_select.string_with_value('*', table, 'uniq_id', str(uniq_id))[0]
     product_file_id = all_product_info[2]
     product_price = all_product_info[3]
     db_obj = db_hendler.DB_update()
@@ -150,17 +164,19 @@ async def add_produkt(cht_id, forw_id):
     return product_file_id
 
 
-async def remove_produkt(cht_id, forw_id):
+async def remove_produkt(cht_id, forw_id, uniq_id):
     info_of_user = get_callback_fo_user_id(cht_id)
-    old_message_id = info_of_user[2]
+#    old_message_id = info_of_user[2]
     table = info_of_user[1]
     in_cart = info_of_user[3]
     if info_of_user[4] != None:
         price = int(info_of_user[4])
     else:
         price = 0
-    id_produkt = (int(forw_id) - int(old_message_id))/2
-    all_product_info = get_string_fo_id(table, id_produkt)
+#    id_produkt = (int(forw_id) - int(old_message_id))/2
+#    all_product_info = get_string_fo_id(table, id_produkt)
+    db_select = db_hendler.DB_select()
+    all_product_info = db_select.string_with_value('*', table, 'uniq_id', str(uniq_id))[0]
     product_file_id = all_product_info[2]
     product_price = all_product_info[3]
 
@@ -201,13 +217,15 @@ async def in_cart(cht_id):
     await server_bot.bot.send_message(cht_id, string_output, 'html', reply_markup=send_cart_kb)
 
 
-async def add_remove(cht_id, forw_id, add_remove, back_categories):
-    if add_remove == 'add':
-        file_id = await add_produkt(cht_id, forw_id)
+async def add_remove(cht_id, forw_id, callback, back_categories):
+    if callback[:3] == 'add':
+        uniq_id = callback[8:]
+        file_id = await add_produkt(cht_id, forw_id, uniq_id)
     else:
-        file_id = await remove_produkt(cht_id, forw_id)
+        uniq_id = callback[11:]
+        file_id = await remove_produkt(cht_id, forw_id, uniq_id)
     vsego = await number_of_added(cht_id, file_id)
-    new_counter_kb = await assemble_keyboard('🛒 ' + str(vsego), back_categories)
+    new_counter_kb = await assemble_keyboard('🛒 ' + str(vsego), back_categories, str(uniq_id))
     await server_bot.bot.edit_message_reply_markup(cht_id, forw_id, reply_markup=new_counter_kb)
 
 
@@ -215,8 +233,6 @@ async def remove_all_cart(cht_id):
     db_obj = db_hendler.DB_update()
     db_obj.string_with_value('user_data', 'price', 'user_id', cht_id, None)
     db_obj.string_with_value('user_data', 'in_cart', 'user_id', cht_id, None)
-
-
 
 
 async def format_order(cht_id):
@@ -237,7 +253,8 @@ async def format_order(cht_id):
 async def verifi_phone(cht_id, forw_id):
     a = 0
     phone = get_callback_fo_user_id(cht_id)[6]
-    if (len(phone) < 10) and (len(phone) < 13):
+    print(phone)
+    if (len(phone) <= 10) and (len(phone) < 13):
         await nav_back(cht_id, forw_id, 'thre')
         await server_bot.bot.send_message(cht_id, 'В номере должно быть 11 цифр', reply_markup=okey_kb)
     elif 11 <= len(phone):
