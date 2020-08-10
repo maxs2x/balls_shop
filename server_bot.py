@@ -68,13 +68,13 @@ async def cmd_menu(message: types.Message):
 
     if message.md_text == '✅  Подтвердить  ✅':
         status = await app.verifi_phone(cht_id, forw_id)
+        print(status)
         if status == 'done':
             await app.format_order(cht_id)
             await app.nav_back(cht_id, forw_id, 'thre')
             await bot.send_message(cht_id, 'Заказ успешно отправлен. Спасибо за покупку!', reply_markup=back_categories_kb)
             await app.remove_all_cart(cht_id)
         else:
-            await app.nav_back(cht_id, forw_id, 'two')
             db_obj = db_hendler.DB_update()
             db_obj.string_with_value('user_data', 'phone', 'user_id', cht_id, None)
     elif message.md_text != '✅  Подтвердить  ✅':
@@ -92,6 +92,7 @@ async def cmd_menu(message: types.Message):
 
 @dp.callback_query_handler(lambda callback_query: True)
 async def some_callback_handler(callback_query: types.CallbackQuery):
+    print(callback_query)
     call_back = callback_query.data
     cht_id = callback_query.message.chat.id
     forw_id = callback_query.message.message_id
@@ -135,22 +136,35 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
         #Блок отображения карточек товара
         if call_back == 'imgfolga' or call_back == 'imggelii' or call_back == 'imgkmpzc':
             await app.send_product_kart(call_back, cht_id, forw_id)
-        elif call_back == 'add':
-            await app.add_remove(cht_id, forw_id, 'add', None)
-        elif call_back == 'add_end':
-            await app.add_remove(cht_id, forw_id, 'add', back_categories)
-        elif call_back == 'remove':
-            await app.add_remove(cht_id, forw_id, 'remove', None)
-        elif call_back == 'remove_end':
-            await app.add_remove(cht_id, forw_id, 'remove', back_categories)
+        elif call_back[:7] == 'add_upp':
+            await bot.answer_callback_query(callback_query.id, cache_time=0.5)
+            await app.add_remove(cht_id, forw_id, call_back, None)
+        elif call_back[:7] == 'add_end':
+            await bot.answer_callback_query(callback_query.id, cache_time=0.5)
+            await app.add_remove(cht_id, forw_id, call_back, back_categories)
+        elif call_back[:10] == 'remove_upp':
+            await bot.answer_callback_query(callback_query.id, cache_time=0.5)
+            await app.add_remove(cht_id, forw_id, call_back, None)
+        elif call_back[:10] == 'remove_end':
+            await bot.answer_callback_query(callback_query.id, cache_time=0.5)
+            await app.add_remove(cht_id, forw_id, call_back, back_categories)
 
         #Функционал админа
         if call_back == 'add_prod' or call_back == 'del_prod' or call_back == 'red_prod':
+            await app.nav_back(cht_id, forw_id, 'no')
             await admin.enter_admin(call_back, cht_id)
         elif call_back == 'admin_select_imggelii' or call_back == 'admin_select_imgfolga' or call_back == 'admin_select_imgkmpzc':
+            await app.nav_back(cht_id, forw_id, 'no')
             await admin.get_data(call_back, cht_id)
         elif call_back[:11] == 'admin_added':
+            await app.nav_back(cht_id, forw_id, 'no')
             await admin.set_data(call_back, cht_id, forw_id)
+        elif call_back[:10] == 'delet_card':
+            await admin.delet_card(call_back, cht_id, forw_id)
+        elif call_back == 'start_admin':
+            await app.nav_back(cht_id, forw_id, 'no')
+            await bot.send_message(cht_id, 'Выбери нужное действие',
+                                   reply_markup=admin_menu_kb)
 
     #Эта функция нужна для реализации кнопки "Назад"
     await _send_fun_(call_back, cht_id, forw_id)
