@@ -3,7 +3,8 @@ from sqlite3 import Error
 
 
 class ConDB:
-    sql_methods = ('SELECT ', 'UPDATE ', ' FROM ', ' WHERE ', '=?', ' SET ', 'MAX', ' MATCH ', 'INSERT INTO ', ' VALUES ')
+    sql_methods = ('SELECT ', 'UPDATE ', ' FROM ', ' WHERE ', '=?', ' SET ', 'MAX', ' MATCH ', 'INSERT INTO ', ' VALUES ',
+                   'DELETE ', 'COUNT(')
     data_base = r"db/product.db"
 
 
@@ -47,6 +48,14 @@ class DB_select(ConDB):
         return rows
 
 
+    def count_string(self, count_row, table):
+        sql = self.sql_methods[0] + self.sql_methods[11] + str(count_row) + ')' + self.sql_methods[2] + str(table)
+        print(sql)
+        self.cur.execute(sql)
+        rows = self.cur.fetchall()
+        return rows
+
+
 class DB_update(ConDB):
     def string_with_value(self, table, select_row, row, value, set_value):
         sql = self.sql_methods[1] + str(table) + self.sql_methods[5] + str(select_row) + self.sql_methods[4] + self.sql_methods[3] + str(
@@ -66,6 +75,16 @@ class DB_insert(ConDB):
                 elem = 'None'
             sql_value += elem + "', '"
         sql = self.sql_methods[8] + table + ' (' + sql_rows + ')' + self.sql_methods[9] + '(' + sql_value[:len(sql_value) - 3] + ');'
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql)
+        self.conn.commit()
+        return 'ok'
+
+
+class DB_delet(ConDB):
+    def dell_string(self, table, search_row, search_value):
+        sql = self.sql_methods[10] + self.sql_methods[2] + str(table) + self.sql_methods[3] + str(search_row) + '="' + str(search_value) + '";'
         print(sql)
         self.cur = self.create_con()
         self.cur.execute(sql)
