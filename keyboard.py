@@ -13,6 +13,8 @@ bt2 = types.InlineKeyboardButton(text='Гелиевые', callback_data='imggeli
 bt3 = types.InlineKeyboardButton(text='Готовые композиции', callback_data='imgkmpzc')
 send_cart = types.InlineKeyboardButton(text='✅  Отправить заказ  ✅', callback_data='by_order')
 remove_cart = types.InlineKeyboardButton(text='⛔ Очистить корзину ⛔', callback_data='remove_cart')
+cart_true_phone = types.InlineKeyboardButton(text='Номер верный!', callback_data='by_order_true_phone')
+cart_false_phone = types.InlineKeyboardButton(text='Изменить номер', callback_data='by_order_phone')
 create_order = types.KeyboardButton(text='✅  Подтвердить  ✅')
 admin_add_prod = types.InlineKeyboardButton(text='✅  Добавить товар', callback_data='add_prod')
 admin_del_prod = types.InlineKeyboardButton(text='⛔  Удалить товар', callback_data='del_prod')
@@ -20,6 +22,7 @@ admin_red_prod = types.InlineKeyboardButton(text='🛒  Редактироват
 admin_select_categ_gel = types.InlineKeyboardButton(text='👍 Гелий', callback_data='admin_select_imggelii')
 admin_select_categ_fol = types.InlineKeyboardButton(text='👍 Фольга', callback_data='admin_select_imgfolga')
 admin_select_categ_kpz = types.InlineKeyboardButton(text='👍 Композиции', callback_data='admin_select_imgkmpzc')
+
 
 admin_menu_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
 admin_menu_kb.add(admin_add_prod)
@@ -39,8 +42,13 @@ send_cart_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
 send_cart_kb.add(send_cart)
 send_cart_kb.add(back_start, remove_cart)
 
+it_phone_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
+it_phone_kb.add(cart_true_phone, cart_false_phone)
+
 back_categories_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
 back_categories_kb.add(back_start)
+
+remove_kb = types.ReplyKeyboardRemove()
 
 okey_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
 okey_kb.add(create_order)

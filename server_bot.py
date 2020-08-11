@@ -101,7 +101,10 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
     async def _send_fun_(call_back, chat_id, forw_id):
         # Блок основного меню
         if call_back == 'start':
-            await app.nav_back(cht_id, forw_id, 'no')
+            await bot.send_message(cht_id, '.............. ', reply_markup=remove_kb)
+            #await app.nav_back(cht_id, forw_id, 'two')
+
+            await bot.delete_message(cht_id, str(int(forw_id) + 1))
             await bot.send_message(chat_id, 'Служба доставки гелиевых шариков в Кирове. Выберите нужный пункт в меню',
                                    reply_markup=main_menu_kb)
         elif call_back == 'categories':
@@ -121,9 +124,20 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
             await app.nav_back(cht_id, forw_id, 'yes')
             await app.remove_all_cart(cht_id)
             await app.in_cart(cht_id)
-        elif call_back == 'by_order':
+        elif call_back[:8] == 'by_order':
             await app.nav_back(cht_id, forw_id, 'no')
-            await bot.send_message(cht_id, 'Для уточнения деталей заказа введите Ваш номер телефона в формате 89ХХ ХХХ ХХХХ или +79ХХ ХХХ ХХХХ и нажмите кнопку ПОДТВЕРДИТЬ', reply_markup=okey_kb)
+            if len(call_back) == 8:
+                await app.order_by(cht_id)
+            elif call_back[9:] == 'phone':
+                #await bot.delete_message(cht_id, forw_id)
+                await app.order_by(cht_id, phone='redact')
+            elif call_back[9:] == 'true_phone':
+                await app.format_order(cht_id)
+                await app.nav_back(cht_id, forw_id, 'thre')
+                await bot.send_message(cht_id, 'Заказ успешно отправлен. Спасибо за покупку!',
+                                       reply_markup=back_categories_kb)
+                await app.remove_all_cart(cht_id)
+
 
         # Блок навигации назад
         if call_back == 'back_start':

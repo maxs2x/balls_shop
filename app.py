@@ -48,7 +48,6 @@ async def number_of_added(cht_id, file_id):
     if in_cart != None:
         if ' ' in in_cart:
             arr_in_cart = [str(elem) for elem in in_cart.split(' ')]
-
             for elem in arr_in_cart:
                 if file_id == elem:
                     vsego += 1
@@ -137,15 +136,12 @@ async def nav_back(cht_id, for_id, many):
 
 async def add_produkt(cht_id, forw_id, uniq_id):
     info_of_user = get_callback_fo_user_id(cht_id)
-#    old_message_id = info_of_user[2]
     table = info_of_user[1]
     in_cart = info_of_user[3]
     if info_of_user[4] != None:
         price = int(info_of_user[4])
     else:
         price = 0
-#    id_produkt = (int(forw_id) - int(old_message_id))/2
-#    all_product_info = get_string_fo_id(table, id_produkt)
     db_select = db_hendler.DB_select()
     all_product_info = db_select.string_with_value('*', table, 'uniq_id', str(uniq_id))[0]
     product_file_id = all_product_info[2]
@@ -215,6 +211,22 @@ async def in_cart(cht_id):
 
     string_output += '\n Общфя стоимость ' + str(all_price)
     await server_bot.bot.send_message(cht_id, string_output, 'html', reply_markup=send_cart_kb)
+
+
+async def order_by(cht_id, phone=None):
+    if phone == None:
+        phon_numb = get_callback_fo_user_id(cht_id)[6]
+    else:
+        phon_numb = 'redact'
+
+    if phon_numb == phone:
+        await server_bot.bot.send_message(cht_id,
+                               'Для уточнения деталей заказа отправьте сообщение с Вашим номер телефона в формате 89ХХ ХХХ ХХХХ или +79ХХ ХХХ ХХХХ  нажмите кнопку ПОДТВЕРДИТЬ',
+                               reply_markup=okey_kb)
+        await server_bot.bot.send_message(cht_id, 'Далее нажмите кнопку ПОДТВЕРДИТЬ', reply_markup=back_categories_kb)
+    else:
+        text = 'Ранее Вы делали у нас заказ и оставляли номер ' + str(phon_numb) + '. Использовать этот номер снова?'
+        await  server_bot.bot.send_message(cht_id, text, reply_markup=it_phone_kb)
 
 
 async def add_remove(cht_id, forw_id, callback, back_categories):
