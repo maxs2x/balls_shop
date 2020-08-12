@@ -102,3 +102,30 @@ async def c_b_card_del(card_number, table, end):
         del_card_kb.add(del_card)
     return del_card_kb
 
+
+class RedactCartKB:
+    @staticmethod
+    async def made_kb(id_card, table):
+        callback = 'redact_' + str(table) + '_' + str(id_card)
+        redact_description = types.InlineKeyboardButton(text='Изменить описание', callback_data=(callback + '_1'))
+        redact_price = types.InlineKeyboardButton(text='Изменить цену', callback_data=(callback  + '_2'))
+        redact_img = types.InlineKeyboardButton(text='Изменить изображение', callback_data=(callback  + '_3'))
+        redact_kard_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
+        redact_kard_kb.add(redact_description)
+        redact_kard_kb.add(redact_price)
+        redact_kard_kb.add(redact_img)
+        return redact_kard_kb
+
+
+    @staticmethod
+    async def choose_card_kb(id_card, table, do = None):
+        if do == None:
+            callback = 'choose_' + str(table) + '_' + str(id_card)
+            choose_it_card = types.InlineKeyboardButton(text='Изменить эту карточку', callback_data=callback)
+        else:
+            callback = 'do_redact' + str(table) + '_' + str(id_card) + '_' + str(do)
+            choose_it_card = types.InlineKeyboardButton(text='Применить', callback_data=callback)
+        choose_it_card_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
+        choose_it_card_kb.add(choose_it_card)
+        return choose_it_card_kb
+

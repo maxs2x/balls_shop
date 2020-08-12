@@ -52,12 +52,15 @@ async def add_product(message: types.Message):
 async def input_photo(message: types.ContentType.PHOTO):
     download_photo = message.photo[2].file_id
     see_cache = DB_select()
+    insert_photo = DB_update()
     cache = see_cache.string_with_value('cache', 'user_data', 'user_id', message.chat.id)
-    if cache[0][0] == 'photo':
+    callback_in = see_cache.string_with_value('callback_in', 'user_data', 'user_id', message.chat.id)
+    if cache[0][0] == 'photo' and callback_in[0][0] != 'red_prod':
         arr_uniq_id = app.search_max_uniq_id()
-        insert_photo = DB_update()
         insert_photo.string_with_value(arr_uniq_id[1], 'file_id', 'uniq_id', arr_uniq_id[0], download_photo)
         insert_photo.string_with_value('user_data', 'cache', 'user_id', message.chat.id, 'added')
+    elif callback_in[0][0] == 'red_prod':
+        insert_photo.string_with_value('user_data', 'cache', 'user_id', message.chat.id, download_photo)
 
 
 @dp.message_handler(content_types='text')
@@ -65,7 +68,8 @@ async def cmd_menu(message: types.Message):
     print(message.md_text)
     cht_id = message.chat.id
     forw_id = message.message_id
-
+    db_select = db_hendler.DB_select()
+    callback_in = db_select.string_with_value('callback_in', 'user_data', 'user_id', cht_id)
     if message.md_text == '✅  Подтвердить  ✅':
         status = await app.verifi_phone(cht_id, forw_id)
         print(status)
@@ -78,16 +82,16 @@ async def cmd_menu(message: types.Message):
             db_obj = db_hendler.DB_update()
             db_obj.string_with_value('user_data', 'phone', 'user_id', cht_id, None)
     elif message.md_text != '✅  Подтвердить  ✅':
-        db_select = db_hendler.DB_select()
-        callback_in = db_select.string_with_value('in_cart', 'user_data', 'user_id', cht_id)
-        print(callback_in)
-        if callback_in[0][0] != None:
+        in_cart = db_select.string_with_value('in_cart', 'user_data', 'user_id', cht_id)
+        print(in_cart)
+        if in_cart[0][0] != None and callback_in[0][0] != 'red_prod':
             db_obj = db_hendler.DB_update()
             db_obj.string_with_value('user_data', 'phone', 'user_id', cht_id, message.md_text)
-
-
-
-
+    if 1 < len(message.md_text) < 100:
+        print(callback_in)
+        if callback_in[0][0] == 'red_prod':
+            db_obj = db_hendler.DB_update()
+            db_obj.string_with_value('user_data', 'cache', 'user_id', cht_id, message.md_text)
 
 
 @dp.callback_query_handler(lambda callback_query: True)
@@ -129,7 +133,6 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
             if len(call_back) == 8:
                 await app.order_by(cht_id)
             elif call_back[9:] == 'phone':
-                #await bot.delete_message(cht_id, forw_id)
                 await app.order_by(cht_id, phone='redact')
             elif call_back[9:] == 'true_phone':
                 await app.format_order(cht_id)
@@ -137,7 +140,6 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
                 await bot.send_message(cht_id, 'Заказ успешно отправлен. Спасибо за покупку!',
                                        reply_markup=back_categories_kb)
                 await app.remove_all_cart(cht_id)
-
 
         # Блок навигации назад
         if call_back == 'back_start':
@@ -179,6 +181,21 @@ async def some_callback_handler(callback_query: types.CallbackQuery):
             await app.nav_back(cht_id, forw_id, 'no')
             await bot.send_message(cht_id, 'Выбери нужное действие',
                                    reply_markup=admin_menu_kb)
+        elif call_back[:6] == 'choose':
+            await app.nav_back(cht_id, forw_id, 'no')
+            await admin.AdminCardForRedact.redact_card(cht_id, call_back)
+        elif call_back[:6] == 'redact':
+            await app.nav_back(cht_id, forw_id, 'two')
+            await admin.AdminCardForRedact.modify_card(cht_id, call_back)
+        elif call_back[:9] == 'do_redact':
+            do = await admin.AdminCardForRedact.do_redact(cht_id, call_back)
+            await app.nav_back(cht_id, forw_id, 'two')
+            if do == 'ok':
+                await bot.send_message(cht_id, 'Карточка успешно отредактирована. Выбери нужное действие',
+                                   reply_markup=admin_menu_kb)
+            else:
+                await bot.send_message(cht_id, 'Ошибка!!! Карточка не изменилась. Выбери нужное действие',
+                                       reply_markup=admin_menu_kb)
 
     #Эта функция нужна для реализации кнопки "Назад"
     await _send_fun_(call_back, cht_id, forw_id)
