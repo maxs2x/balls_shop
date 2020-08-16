@@ -67,13 +67,13 @@ class DB_update(ConDB):
 
 
 class DB_insert(ConDB):
-    def full_string(self, table, rows_in_table, value):
+    def full_string(self, table, rows_in_table, arr_value):
         sql_rows = ', '.join(rows_in_table)
         sql_value = "'"
-        for elem in value:
+        for elem in arr_value:
             if elem == None:
                 elem = 'None'
-            sql_value += elem + "', '"
+            sql_value += str(elem) + "', '"
         sql = self.sql_methods[8] + table + ' (' + sql_rows + ')' + self.sql_methods[9] + '(' + sql_value[:len(sql_value) - 3] + ');'
         print(sql)
         self.cur = self.create_con()

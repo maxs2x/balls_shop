@@ -29,13 +29,14 @@ def get_string_fo_id(name_table, id):
     return ret_info
 
 
-def add_user(user_id):
+async def add_user(user_id):
     db_obj = db_hendler.DB_select()
     info_user = db_obj.string_with_value('*', 'user_data', 'user_id', user_id)
-    print(info_user)
+    arr_user_id = [user_id]
     if len(info_user) == 0:
+        print(arr_user_id)
         in_obj = db_hendler.DB_insert()
-        in_obj.full_string('user_data', 'user_id', user_id)
+        in_obj.full_string('user_data', ['user_id'], arr_user_id)
 
 
 # Функции бота
@@ -113,6 +114,15 @@ async def nav_back(cht_id, for_id, many):
                 print('error NO deleted ' + str(num_mes))
                 err += 1
                 break
+    elif many == 'yes_every':
+        for i in range(0, 60):
+            num_mes = int(for_id) - i
+            try:
+                await server_bot.bot.delete_message(str(cht_id), str(num_mes))
+            except:
+                print('error NO deleted ' + str(num_mes))
+                err += 1
+                break
     elif many == 'two':
         try:
             await server_bot.bot.delete_message(str(cht_id), str(for_id))
@@ -127,6 +137,19 @@ async def nav_back(cht_id, for_id, many):
                 await server_bot.bot.delete_message(str(cht_id), str(bac_mes))
         except:
             print('tree Error in nav_back')
+    elif many == 'one_one':
+        try:
+            await server_bot.bot.delete_message(str(cht_id), str(for_id - 1))
+            await server_bot.bot.delete_message(str(cht_id), str(for_id))
+        except:
+            print('one_one Error in nav_back')
+    elif many == 'four':
+        try:
+            for i in range(0, 4):
+                bac_mes = int(for_id) - i
+                await server_bot.bot.delete_message(str(cht_id), str(bac_mes))
+        except:
+            print('one_one Error in nav_back')
     else:
         try:
             await server_bot.bot.delete_message(str(cht_id), str(for_id))
@@ -162,15 +185,12 @@ async def add_produkt(cht_id, forw_id, uniq_id):
 
 async def remove_produkt(cht_id, forw_id, uniq_id):
     info_of_user = get_callback_fo_user_id(cht_id)
-#    old_message_id = info_of_user[2]
     table = info_of_user[1]
     in_cart = info_of_user[3]
     if info_of_user[4] != None:
         price = int(info_of_user[4])
     else:
         price = 0
-#    id_produkt = (int(forw_id) - int(old_message_id))/2
-#    all_product_info = get_string_fo_id(table, id_produkt)
     db_select = db_hendler.DB_select()
     all_product_info = db_select.string_with_value('*', table, 'uniq_id', str(uniq_id))[0]
     product_file_id = all_product_info[2]
@@ -216,6 +236,7 @@ async def in_cart(cht_id):
 async def order_by(cht_id, phone=None):
     if phone == None:
         phon_numb = get_callback_fo_user_id(cht_id)[6]
+        print(phone)
     else:
         phon_numb = 'redact'
 

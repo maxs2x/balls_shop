@@ -1,4 +1,5 @@
 import aiogram
+from time import sleep
 
 from keyboard import *
 import db_hendler
@@ -23,6 +24,23 @@ class CardProduct:
         arr_value = [self.description, self.price, self.imageuniq_id, str(int(uniq_id[0]) + 1)]
         con.full_string(str(self.categ), rows_in_table, arr_value)
         return 'ok'
+
+
+class ValidationInput:
+    @staticmethod
+    def photo(file_id):
+        if len(file_id) == 99:
+            if 'A' in file_id:
+                int = any(map(str.isdigit, file_id))
+                if int == True:
+                    return True
+
+
+    @staticmethod
+    def price(price):
+        int = any(map(str.isdigit, price))
+        if int == True:
+            return True
 
 
 async def enter_admin(call_back, cht_id):
@@ -59,52 +77,71 @@ async def set_data(call_back, cht_id, forw_id):
     else:
         print('xz')
 
-async def del_data(call_back, cht_id):
-    table = call_back[-8:]
-    db_sell = db_hendler.DB_select()
-    all_card = db_sell.max_value('id', table)
-    if all_card == None:
-        await server_bot.bot.send_message(cht_id, 'В этой категории нет товара', reply_markup=admin_sel_cat)
-        return False
-    for i in range(1, int(all_card) + 1):
-        data_product = db_sell.string_with_value('*', table, 'id', str(i))
-        text = data_product[0][1]
-#        price = data_product[0][3]
-        file_id = data_product[0][2]
-        print(file_id)
-        await server_bot.bot.send_message(cht_id, text)
-        if i == int(all_card + 1):
-            number_card = await c_b_card_del(i, table, 'no_end')
-            await server_bot.bot.send_photo(cht_id,
-                                            file_id,
-                                            reply_markup=number_card)
-            sleep(0.1)
-        else:
-            number_card = await c_b_card_del(i, table, 'end')
-            await server_bot.bot.send_photo(cht_id,
-                                            file_id,
-                                            reply_markup=number_card)
+
+class AdminAddProdukt:
+    @staticmethod
+    async def enter_product(cht_id, callback, fwd = None):
+        print('enter_product ' + callback)
+        text_stap_1 = 'Шаг 1. Отправьте сообщение с описанием товара и нажмите "Готово"'
+        text_stap_1_err = 'Пустое сообщение. Отправьте сообщение с описанием товара и нажмите "Готово"'
+        text_stap_2 = 'Шаг 2. Отправьте сообщение с ценой товара и нажмите "Готово"'
+        text_stap_2_err = 'Пустое сообщение. Отправьте сообщение с ценой товара и нажмите "Готово"'
+        text_stap_3 = 'Шаг 3. Отправьте фото товара и нажмите "Готово"'
+        db_up = db_hendler.DB_update()
+        if callback[:12] == 'admin_select':
+            db_up.string_with_value('user_data', 'cache', 'user_id', cht_id, None)
+            enter_product_kb = await RedactCartKB.enter_product_kb(callback[13:] + '_1')
+            await server_bot.bot.send_message(cht_id, text_stap_1, reply_markup=enter_product_kb)
+        elif callback[-1] == '2':
+            try:
+                db_up.string_with_value('user_data', 'callback_in', 'user_id', cht_id, callback)
+                enter_product_kb = await RedactCartKB.enter_product_kb(callback)
+                await server_bot.bot.delete_message(cht_id, int(fwd) + 1)
+                await server_bot.bot.send_message(cht_id, text_stap_2, reply_markup=enter_product_kb)
+            except:
+                callback = callback[-10:-2] + '_1'
+                enter_product_kb = await RedactCartKB.enter_product_kb(callback)
+                await server_bot.bot.send_message(cht_id, text_stap_1_err, reply_markup=enter_product_kb)
+        elif callback[-1] == '3':
+            try:
+                db_up.string_with_value('user_data', 'callback_in', 'user_id', cht_id, callback)
+                await server_bot.bot.delete_message(cht_id, int(fwd) + 1)
+                enter_product_kb = await RedactCartKB.enter_product_kb(callback)
+                await server_bot.bot.send_message(cht_id, text_stap_3, reply_markup=enter_product_kb)
+            except:
+                callback = callback[:-1] + '2'
+                enter_product_kb = await RedactCartKB.enter_product_kb(callback)
+                await server_bot.bot.send_message(cht_id, text_stap_2_err, reply_markup=enter_product_kb)
+        print('enter_product ' + callback)
 
 
-async def add_prod(call_back, cht_id):
-    table = call_back[13:]
-    print(table)
-    con = DB_update()
-    con.string_with_value('user_data', 'cache', 'user_id', cht_id, table)
-    keyboard = AdminCalback(table).make_callback()
-    text = 'Добавь информацию о товаре используя в качестве разделителя ; в формате: Цена;Описание  В конце загрузите изображение товара и нажмите кнопку "Отправить" для добавления всей этой информации в магазин'
-    await server_bot.bot.send_message(cht_id, text, reply_markup=keyboard)
+    @staticmethod
+    async def set_product(cht_id, callback, fwd):
+        try:
+            #await server_bot.bot.delete_message(cht_id, int(fwd) + 1)
+            db_sel = db_hendler.DB_select()
+            cache = db_sel.string_with_value('cache', 'user_data', 'user_id', cht_id)[0][0]
+            arr_cache = cache.split(';')
+            print(callback, arr_cache)
+            build_card = CardProduct(categ=callback[12:-2], description=arr_cache[0], price=arr_cache[1], image=arr_cache[2])
+            if build_card.add_product() == 'ok':
+                await server_bot.bot.send_message(cht_id, 'Новая карточка успешно создана', reply_markup=admin_menu_kb)
+        except:
+            print('set_product ' + callback)
+            callback = callback[:-1] + '3'
+            enter_product_kb = await RedactCartKB.enter_product_kb(callback)
+            await server_bot.bot.send_message(cht_id, 'ОШИБКА (фото не отправлено). Карточка не создана', reply_markup=enter_product_kb)
 
 
-async def get_data(call_back, cht_id):
+async def get_data(call_back, cht_id, fowd):
     db_sell = db_hendler.DB_select()
     admin_do = db_sell.string_with_value('callback_in', 'user_data', 'user_id', cht_id)
     if admin_do[0][0] == 'add_prod':
-        await add_prod(call_back, cht_id)
+        await AdminAddProdukt.enter_product(cht_id, call_back)
     elif admin_do[0][0] == 'del_prod':
-        await del_data(call_back, cht_id)
+        await ProductCard.send_list_card(cht_id, call_back, fowd, 'del_prod')
     elif admin_do[0][0] == 'red_prod':
-        await AdminCardForRedact.send_card(cht_id, call_back)
+        await ProductCard.send_list_card(cht_id, call_back, fowd, 'red_prod')
     print('get_data ' + admin_do[0][0])
 
 
@@ -115,36 +152,67 @@ async def delet_card(call_back, cht_id, fwd_id):
     delet_obj = db_hendler.DB_delet()
     delet_obj.dell_string(arr_callback[3], 'id', arr_callback[2])
     await server_bot.bot.delete_message(cht_id, fwd_id)
-    await server_bot.bot.delete_message(cht_id, str(int(fwd_id) - 1))
+    if len(arr_callback) > 4:
+        await server_bot.bot.edit_message_text('Карточка удалена', cht_id, int(fwd_id) - 1, reply_markup=admin_start_kb)
+    else:
+        await server_bot.bot.edit_message_text('Карточка удалена', cht_id, int(fwd_id) - 1)
     return 'ok'
 
 
-class AdminCardForRedact:
-
-
+class ProductCard():
     @staticmethod
-    async def send_card(cht_id, callback):
+    async def send_list_card(cht_id, callback, fowd, method):
         print('AddCardForRedact.send_card')
         table = callback[-8:]
         db_sel = db_hendler.DB_select()
         count_card = db_sel.count_string('id', table)
         real_id_card = 1
+        print(count_card)
+        if count_card[0][0] == 0:
+            await server_bot.bot.send_message(cht_id, 'В этой категории нет товара', reply_markup=admin_sel_cat)
+            return False
         for i in range(1, int(count_card[0][0]) + 1):
             get_card = app.get_string_fo_id(table, real_id_card)
             real_id_card = get_card[1]
             data_card = get_card[0]
-            text_card = 'Описание карточки "' + str(data_card[1]) + '" Цена товара "' + str(data_card[3]) + '"'
-            redact_kard_kb = await RedactCartKB.choose_card_kb(real_id_card, table)
+            text_card = str(data_card[1]) + '" Цена "' + str(data_card[3]) + '"'
+            if method == 'red_prod':
+                text_card = 'Описание карточки "' + str(data_card[1]) + '" Цена товара "' + str(data_card[3]) + '"'
+            if i == int(count_card[0][0]):
+                if method == 'red_prod':
+                    redact_kard_kb = await RedactCartKB.choose_card_kb(real_id_card, table, do=None, end='yes')
+                else:
+                    redact_kard_kb = await c_b_card_del(real_id_card, table, 'end')
+                num_mes = int(fowd) + i * 2
+                db_upd = db_hendler.DB_update()
+                db_upd.string_with_value('user_data', 'message_id', 'user_id', cht_id, num_mes)
+            else:
+                if method == 'red_prod':
+                    redact_kard_kb = await RedactCartKB.choose_card_kb(real_id_card, table)
+                else:
+                    redact_kard_kb = await c_b_card_del(real_id_card, table, 'no_end')
             await server_bot.bot.send_message(cht_id, text_card)
             await server_bot.bot.send_photo(cht_id, data_card[2], reply_markup=redact_kard_kb)
             real_id_card += 1
 
-
+class AdminCardForRedact:
     @staticmethod
     async def redact_card(cht_id, callback):
         table = callback[7:15]
         id_card = callback[16:]
         db_obj = db_hendler.DB_select()
+
+        count_card = db_obj.count_string('id', table)[0][0]
+        message_id = int(db_obj.string_with_value('message_id', 'user_data', 'user_id', cht_id)[0][0])
+        for i in range(0, int(count_card) * 2 ):
+            try:
+                await  server_bot.bot.delete_message(cht_id, message_id)
+            except:
+                message_id -= 0
+            message_id -= 1
+            print(message_id)
+            sleep(0.1)
+
         data_card = db_obj.string_with_value('*', table, 'id', id_card)[0]
         redact_card_kb = await RedactCartKB.made_kb(id_card, table)
         text = 'Описание карточки "' + str(data_card[1]) + '" Цена товара "' + str(data_card[3]) + '"'
@@ -153,11 +221,12 @@ class AdminCardForRedact:
 
 
     @staticmethod
-    async def modify_card(cht_id, callback):
+    async def modify_card(cht_id, callback, forw_id):
         table = callback[7:15]
         do = callback[-1]
         callback = callback[:-2]
         id_card = callback[16:]
+        await app.nav_back(cht_id, forw_id, 'one_one')
         print('modify_card ' + table + ' ' + id_card + ' ' + do)
         do_redact_kb = await RedactCartKB.choose_card_kb(id_card, table, do)
         if do == '1':
@@ -172,19 +241,34 @@ class AdminCardForRedact:
 
 
     @staticmethod
-    async def do_redact(cht_id, callback):
-        table = callback[9:17]
+    async def do_redact(cht_id, callback, fwd):
         do = callback[-1]
         callback = callback[:-2]
+        table = callback[9:17]
         id_card = callback[18:]
-        if do == '1':
-            mad_row = 'description'
-        elif do == '2':
-            mad_row = 'price'
-        else:
-            mad_row = 'file_id'
-        db_obj = db_hendler.DB_select()
-        set_value = db_obj.string_with_value('cache', 'user_data', 'user_id', cht_id)[0][0]
-        update_table = db_hendler.DB_update()
-        update_table.string_with_value(table, mad_row, 'id', id_card, set_value)
-        return 'ok'
+        try:
+            await server_bot.bot.delete_message(cht_id, int(fwd) + 1)
+            callback = callback[:-2]
+            db_obj = db_hendler.DB_select()
+            update_table = db_hendler.DB_update()
+            set_value = db_obj.string_with_value('cache', 'user_data', 'user_id', cht_id)[0][0]
+            if do == '1':
+                mad_row = 'description'
+                update_table.string_with_value(table, mad_row, 'id', id_card, set_value)
+            elif do == '2':
+                mad_row = 'price'
+                update_table.string_with_value(table, mad_row, 'id', id_card, set_value)
+            else:
+                mad_row = 'file_id'
+                valid = ValidationInput.photo(set_value)
+                if valid == True:
+                    update_table.string_with_value(table, mad_row, 'id', id_card, set_value)
+                else:
+                    do_redact_kb = await RedactCartKB.choose_card_kb(id_card, table, do)
+                    await server_bot.bot.send_message(cht_id, 'ОШИБКА! Отправленные данные не являются изображением! Повторите попытку',
+                                                      reply_markup=do_redact_kb)
+                    return 'false'
+            return 'ok'
+        except:
+            do_redact_kb = await RedactCartKB.choose_card_kb(id_card, table, do)
+            await server_bot.bot.send_message(cht_id, 'ОШИБКА! Пустой ввод! Повторите попытку', reply_markup=do_redact_kb)

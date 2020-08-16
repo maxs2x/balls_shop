@@ -57,6 +57,9 @@ admin_sel_cat = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
 admin_sel_cat.add(admin_select_categ_fol, admin_select_categ_gel, admin_select_categ_kpz)
 admin_sel_cat.add(back_admin)
 
+admin_start_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
+admin_start_kb.add(back_admin)
+
 
 
 # Собираем клавиатуру для карточки товара
@@ -93,6 +96,8 @@ class AdminCalback:
 
 async def c_b_card_del(card_number, table, end):
     callback = 'delet_card_' + str(card_number) + '_' + str(table)
+    if end == 'end':
+        callback += '_end'
     del_card = types.InlineKeyboardButton(text='Удалить эту карточку', callback_data=callback)
     back = types.InlineKeyboardButton(text='⬅ Назад', callback_data='start_admin')
     del_card_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
@@ -104,6 +109,9 @@ async def c_b_card_del(card_number, table, end):
 
 
 class RedactCartKB:
+    back_admin = types.InlineKeyboardButton(text='⬅ Назад', callback_data='start_admin')
+
+
     @staticmethod
     async def made_kb(id_card, table):
         callback = 'redact_' + str(table) + '_' + str(id_card)
@@ -114,11 +122,12 @@ class RedactCartKB:
         redact_kard_kb.add(redact_description)
         redact_kard_kb.add(redact_price)
         redact_kard_kb.add(redact_img)
+        redact_kard_kb.add(back_admin)
         return redact_kard_kb
 
 
     @staticmethod
-    async def choose_card_kb(id_card, table, do = None):
+    async def choose_card_kb(id_card, table, do = None, end = 'no'):
         if do == None:
             callback = 'choose_' + str(table) + '_' + str(id_card)
             choose_it_card = types.InlineKeyboardButton(text='Изменить эту карточку', callback_data=callback)
@@ -127,5 +136,24 @@ class RedactCartKB:
             choose_it_card = types.InlineKeyboardButton(text='Применить', callback_data=callback)
         choose_it_card_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
         choose_it_card_kb.add(choose_it_card)
+        if end == 'yes':
+            back_admin = types.InlineKeyboardButton(text='⬅ Назад', callback_data='start_admin')
+            choose_it_card_kb.add(back_admin)
         return choose_it_card_kb
+
+
+    @staticmethod
+    async def enter_product_kb(callback):
+        stap = int(callback[-1]) + 1
+        if stap == 2:
+            new_callback = 'enter_field_' + callback[:-2] + '_' + str(stap)
+        elif stap == 3:
+            new_callback = 'enter_field_' + callback[12:-2] + '_' + str(stap)
+        elif stap == 4:
+            new_callback = 'set_product_' + callback[12:-2] + '_' + str(stap)
+        enter_product = types.InlineKeyboardButton(text='Готово', callback_data=new_callback)
+        back_admin = types.InlineKeyboardButton(text='⬅ Назад', callback_data='start_admin')
+        enter_product_kb = types.InlineKeyboardMarkup(row_width=3, inline_keyboard=None)
+        enter_product_kb.add(back_admin, enter_product)
+        return enter_product_kb
 
