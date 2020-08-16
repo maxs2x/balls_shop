@@ -2,103 +2,91 @@ import sqlite3
 from sqlite3 import Error
 
 
-
-def create_connection(db_file):
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
-    except Error as e:
-        print(e)
-    return conn
-
-data_base = r"db/product.db"
-conn = create_connection(data_base)
-
-def select_string_in_tb(conn, price):
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM imgfolga WHERE price=?", (price,))
-    rows = cur.fetchall()
-    for row in rows:
-        print(row)
+class ConDB:
+    sql_methods = ('SELECT ', 'UPDATE ', ' FROM ', ' WHERE ', '=?', ' SET ', 'MAX', ' MATCH ', 'INSERT INTO ', ' VALUES ',
+                   'DELETE ', 'COUNT(')
+    data_base = r"db/product.db"
 
 
-def max_id(conn, name_table):
-    sql = "SELECT MAX(id) FROM " + str(name_table)
-    cur = conn.cursor()
-    cur.execute(sql)
-    rows = cur.fetchall()
-    ret = int(rows[0][0])
-    return ret
-
-def get_string_fo_id(conn, name_table, id):
-    sql = "SELECT * FROM " + str(name_table) +" WHERE id=?"
-    cur = conn.cursor()
-    cur.execute(sql, (id,))
-    rows = cur.fetchall()
-    ret = rows[0]
-    return ret
-
-def get_callback_fo_user_id(conn, user_id):
-    sql = "SELECT * FROM user_data WHERE user_id=?"
-    cur = conn.cursor()
-    cur.execute(sql, (user_id,))
-    rows = cur.fetchall()
-    ret = rows[0][2]
-    print(rows)
-    return rows[0]
-
-def get_string_table_for_elem(conn, table, name_stolb, elem):
-    sql = "SELECT * FROM " + str(table) + " WHERE " + str(name_stolb) + "=?"
-    print(sql)
-    cur = conn.cursor()
-    cur.execute(sql, (elem,))
-    rows = cur.fetchall()
-    print(rows)
-    return rows
+    @classmethod
+    def create_con(self):
+        try:
+            self.conn = sqlite3.connect(self.data_base)
+            self.cur = self.conn.cursor()
+            print(sqlite3.version)
+        except Error as e:
+            print(e)
+        return self.cur
 
 
-def search_elem(conn, name_table, search_text):
-    sql = "SELECT * FROM " + name_table + " WHERE file_id MATCH '" + search_text + "';"
-    cur = conn.cursor()
-    rows = cur.fetchall()
-    return rows
-
-def add_user(conn, user_id):
-    sql = """SELECT * FROM user_data WHERE user_id=?"""
-    sql_add = """INSERT INTO user_data(user_id) VALUES(?)"""
-    add_data = (str(user_id))
-    cur = conn.cursor()
-    cur.execute(sql, (user_id,))
-    rows = cur.fetchall()
-    if len(rows) == 0:
-        with conn:
-            cur = conn.cursor()
-            cur.execute(sql_add, (add_data,))
-            return cur.lastrowid
+class DB_select(ConDB):
+    def string_with_value(self, select_row, table, row, value):
+        sql = self.sql_methods[0] + str(select_row) + self.sql_methods[2] + str(table) + self.sql_methods[3] + str(row) + self.sql_methods[4]
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql, (value,))
+        rows = self.cur.fetchall()
+        return rows
 
 
-def add_cb_user(conn, user_id, callback_in, message_id):
-    sql_update_out = "UPDATE user_data SET callback_in=?, message_id=? WHERE user_id=?"
-    cur = conn.cursor()
-    cur.execute(sql_update_out, (callback_in, str(message_id), int(user_id)))
-    conn.commit()
+    def max_value(self, name_row, table):
+        val_id = '(' + name_row + ')'
+        sql = self.sql_methods[0] + self.sql_methods[6] + val_id + self.sql_methods[2] + table + ';'
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql)
+        rows = self.cur.fetchall()
+        return rows[0][0]
+
+    # Метод не реализован до конца (сейчас не работает)
+    def search_string(self, select_row, table, where_row, search_test):
+        sql = self.sql_methods[0] + str(select_row) + self.sql_methods[2] + str(table) + self.sql_methods[3] + str(
+            where_row) + self.sql_methods[7] + "'" + str(search_test) + "';"
+        print(sql)
+        self.cur.execute(sql)
+        rows = self.cur.fetchall()
+        return rows
 
 
-def update_table(conn, table, name_id_string, column, up_data, id_string):
-    sql_update = "UPDATE " + table + " SET " + column + "=? WHERE " + name_id_string + "=?"
-    cur = conn.cursor()
-    cur.execute(sql_update, (up_data, id_string))
-    conn.commit()
+    def count_string(self, count_row, table):
+        sql = self.sql_methods[0] + self.sql_methods[11] + str(count_row) + ')' + self.sql_methods[2] + str(table)
+        print(sql)
+        self.cur.execute(sql)
+        rows = self.cur.fetchall()
+        return rows
 
 
+class DB_update(ConDB):
+    def string_with_value(self, table, select_row, row, value, set_value):
+        sql = self.sql_methods[1] + str(table) + self.sql_methods[5] + str(select_row) + self.sql_methods[4] + self.sql_methods[3] + str(
+            row) + self.sql_methods[4]
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql, (set_value, int(value)))
+        self.conn.commit()
 
 
+class DB_insert(ConDB):
+    def full_string(self, table, rows_in_table, arr_value):
+        sql_rows = ', '.join(rows_in_table)
+        sql_value = "'"
+        for elem in arr_value:
+            if elem == None:
+                elem = 'None'
+            sql_value += str(elem) + "', '"
+        sql = self.sql_methods[8] + table + ' (' + sql_rows + ')' + self.sql_methods[9] + '(' + sql_value[:len(sql_value) - 3] + ');'
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql)
+        self.conn.commit()
+        return 'ok'
 
-id = 'AA'
-imggelii = 'imgfolga'
-#print(search_elem(conn, imggelii, id))
 
-
-
-
+class DB_delet(ConDB):
+    def dell_string(self, table, search_row, search_value):
+        sql = self.sql_methods[10] + self.sql_methods[2] + str(table) + self.sql_methods[3] + str(search_row) + '="' + str(search_value) + '";'
+        print(sql)
+        self.cur = self.create_con()
+        self.cur.execute(sql)
+        self.conn.commit()
+        return 'ok'
